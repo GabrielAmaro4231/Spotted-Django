@@ -1,3 +1,5 @@
+Membros: Gabriel Amaro
+
 # Spotted API
 
 Backend da aplicação **Spotted**.
