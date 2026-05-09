@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
     'users',
     'posts',
+    'core',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -64,6 +65,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    'core.middleware.request_logging.RequestLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'spotted_api.urls'
@@ -138,3 +141,33 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {message}",
+            "style": "{",
+        },
+    },
+
+    "handlers": {
+        "requests_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": BASE_DIR / "logs/requests.log",
+            "maxBytes": 1024 * 1024 * 5,
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+    },
+
+    "loggers": {
+        "requests": {
+            "handlers": ["requests_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
