@@ -37,7 +37,7 @@ class PostViewSet(viewsets.ModelViewSet):
     def leaderboard(self, request):
         base_queryset = (
             Post.objects
-            .values('user')
+            .values('user', 'user__handle', 'user__show_handle_on_leaderboard')
             .annotate(post_count=Count('id'))
             .order_by('-post_count', 'user')
         )
@@ -56,7 +56,9 @@ class PostViewSet(viewsets.ModelViewSet):
             user_id = entry['user']
 
             if current_user_id and user_id == current_user_id:
-                name = 'Me'
+                name = f"@{entry['user__handle']}"
+            elif entry['user__show_handle_on_leaderboard']:
+                name = f"@{entry['user__handle']}"
             else:
                 name = f'Anonymous User {index}'
 

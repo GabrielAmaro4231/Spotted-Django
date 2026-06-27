@@ -107,7 +107,17 @@ O sistema foi escolhido por sua simplicidade e facilidade de integração com ap
 
 ## Atualização de Perfil
 
-O endpoint `PUT/PATCH /api/users/me/` permite atualizar o email e/ou a senha do usuário autenticado.
+O endpoint `POST /api/users/register/` cria um usuário com `email`, `name`, `password` e, opcionalmente, `profile_image_url` e `show_handle_on_leaderboard`. O campo `handle` é gerado automaticamente a partir do nome do usuário com números aleatórios.
+
+O endpoint `GET /api/users/profile/` retorna os dados completos do usuário autenticado:
+- id
+- email
+- name
+- handle
+- profile_image_url
+- show_handle_on_leaderboard
+
+O endpoint `PUT/PATCH /api/users/me/` permite atualizar o email, nome, link da imagem de perfil, preferência de exibição do handle na leaderboard e/ou senha do usuário autenticado.
 
 Para alterar a senha, a requisição deve enviar a senha atual no campo `current_password` e a nova senha no campo `password`.
 
@@ -120,6 +130,8 @@ Exemplo:
 ```
 
 Após a alteração de senha, o token atual é invalidado. O usuário deve realizar login novamente para receber um novo token.
+
+No endpoint `GET /api/posts/leaderboard/`, o usuário atual aparece como `@handle` quando autenticado. Outros usuários só aparecem como `@handle` quando `show_handle_on_leaderboard` estiver marcado; caso contrário, continuam anônimos.
 
 ---
 

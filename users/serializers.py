@@ -10,8 +10,19 @@ User = get_user_model()
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email', 'password']
+        fields = [
+            'email',
+            'name',
+            'handle',
+            'profile_image_url',
+            'show_handle_on_leaderboard',
+            'password',
+        ]
+        read_only_fields = ['handle']
         extra_kwargs = {
+            'name': {'required': True, 'allow_blank': False},
+            'profile_image_url': {'required': False},
+            'show_handle_on_leaderboard': {'required': False},
             'password': {'write_only': True}
         }
 
@@ -37,7 +48,15 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email']
+        fields = [
+            'id',
+            'email',
+            'name',
+            'handle',
+            'profile_image_url',
+            'show_handle_on_leaderboard',
+        ]
+        read_only_fields = ['id', 'handle']
 
 
 class LoginSerializer(serializers.Serializer):
@@ -69,9 +88,19 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'current_password']
+        fields = [
+            'email',
+            'name',
+            'profile_image_url',
+            'show_handle_on_leaderboard',
+            'password',
+            'current_password',
+        ]
         extra_kwargs = {
-            'email': {'required': False}
+            'email': {'required': False},
+            'name': {'required': False, 'allow_blank': False},
+            'profile_image_url': {'required': False},
+            'show_handle_on_leaderboard': {'required': False},
         }
 
     def validate_email(self, value):
@@ -89,7 +118,15 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        if not data.get('email') and not data.get('password'):
+        profile_fields = [
+            'email',
+            'name',
+            'profile_image_url',
+            'show_handle_on_leaderboard',
+            'password',
+        ]
+
+        if not any(field in data for field in profile_fields):
             raise serializers.ValidationError('At least one field must be updated')
 
         if data.get('password') and not data.get('current_password'):
@@ -114,6 +151,15 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 
         if 'email' in validated_data:
             instance.email = validated_data['email']
+
+        if 'name' in validated_data:
+            instance.name = validated_data['name']
+
+        if 'profile_image_url' in validated_data:
+            instance.profile_image_url = validated_data['profile_image_url']
+
+        if 'show_handle_on_leaderboard' in validated_data:
+            instance.show_handle_on_leaderboard = validated_data['show_handle_on_leaderboard']
 
         if 'password' in validated_data:
             instance.set_password(validated_data['password'])
