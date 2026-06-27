@@ -4,7 +4,48 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
+from .models import UserProfileChangeLog
+
 User = get_user_model()
+
+PROFILE_CHANGE_FIELDS = [
+    'email',
+    'name',
+    'handle',
+    'profile_image_url',
+    'show_handle_on_leaderboard',
+]
+
+
+def get_profile_snapshot(user):
+    return {
+        field: getattr(user, field)
+        for field in PROFILE_CHANGE_FIELDS
+    }
+
+
+def get_profile_changes(user, validated_data):
+    changes = {}
+
+    for field in PROFILE_CHANGE_FIELDS:
+        if field not in validated_data:
+            continue
+
+        old_value = getattr(user, field)
+        new_value = validated_data[field]
+
+        if old_value != new_value:
+            changes[field] = {
+                'old': old_value,
+                'new': new_value,
+            }
+
+    if 'password' in validated_data:
+        changes['password'] = {
+            'changed': True,
+        }
+
+    return changes
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -42,7 +83,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        user = User.objects.create_user(**validated_data)
+        UserProfileChangeLog.objects.create(
+            user=user,
+            event_type=UserProfileChangeLog.EVENT_CREATED,
+            changes=get_profile_snapshot(user),
+        )
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -147,6 +194,8 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
+        changes = get_profile_changes(instance, validated_data)
+
         validated_data.pop('current_password', None)
 
         if 'email' in validated_data:
@@ -165,4 +214,12 @@ class UpdateUserSerializer(serializers.ModelSerializer):
             instance.set_password(validated_data['password'])
 
         instance.save()
+
+        if changes:
+            UserProfileChangeLog.objects.create(
+                user=instance,
+                event_type=UserProfileChangeLog.EVENT_UPDATED,
+                changes=changes,
+            )
+
         return instance

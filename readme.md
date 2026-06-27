@@ -133,6 +133,8 @@ Após a alteração de senha, o token atual é invalidado. O usuário deve reali
 
 No endpoint `GET /api/posts/leaderboard/`, o usuário atual aparece como `@handle` quando autenticado. Outros usuários só aparecem como `@handle` quando `show_handle_on_leaderboard` estiver marcado; caso contrário, continuam anônimos.
 
+Alterações de perfil são registradas internamente em uma tabela de auditoria. A criação salva um snapshot dos dados públicos do perfil, e atualizações salvam apenas os campos alterados. Senhas não são registradas; troca de senha é marcada apenas como alteração realizada.
+
 ---
 
 # Sistema de Logging

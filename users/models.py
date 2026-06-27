@@ -1,6 +1,7 @@
 import uuid
 from secrets import randbelow
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils.text import slugify
@@ -70,3 +71,29 @@ class User(AbstractBaseUser, PermissionsMixin):
 
             if not User.objects.filter(handle=handle).exclude(id=self.id).exists():
                 return handle
+
+
+class UserProfileChangeLog(models.Model):
+    EVENT_CREATED = 'created'
+    EVENT_UPDATED = 'updated'
+
+    EVENT_CHOICES = [
+        (EVENT_CREATED, 'Created'),
+        (EVENT_UPDATED, 'Updated'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile_change_logs'
+    )
+    event_type = models.CharField(max_length=20, choices=EVENT_CHOICES)
+    changes = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user_id} {self.event_type}'

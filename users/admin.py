@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User
+from .models import User, UserProfileChangeLog
 
 
 @admin.register(User)
@@ -71,3 +71,15 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     ]
+
+
+@admin.register(UserProfileChangeLog)
+class UserProfileChangeLogAdmin(admin.ModelAdmin):
+    ordering = ['-created_at']
+    list_display = ['user', 'event_type', 'created_at']
+    list_filter = ['event_type', 'created_at']
+    search_fields = ['user__email', 'user__name', 'user__handle']
+    readonly_fields = ['user', 'event_type', 'changes', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
