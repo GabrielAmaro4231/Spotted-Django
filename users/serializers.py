@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
+from .avatar_service import get_profile_image_for_email
 from .models import UserProfileChangeLog
 
 User = get_user_model()
@@ -59,10 +60,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             'show_handle_on_leaderboard',
             'password',
         ]
-        read_only_fields = ['handle']
+        read_only_fields = ['handle', 'profile_image_url']
         extra_kwargs = {
             'name': {'required': True, 'allow_blank': False},
-            'profile_image_url': {'required': False},
             'show_handle_on_leaderboard': {'required': False},
             'password': {'write_only': True}
         }
@@ -83,6 +83,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        validated_data['profile_image_url'] = get_profile_image_for_email(
+            validated_data['email']
+        )
         user = User.objects.create_user(**validated_data)
         UserProfileChangeLog.objects.create(
             user=user,
@@ -103,7 +106,7 @@ class UserSerializer(serializers.ModelSerializer):
             'profile_image_url',
             'show_handle_on_leaderboard',
         ]
-        read_only_fields = ['id', 'handle']
+        read_only_fields = ['id', 'handle', 'profile_image_url']
 
 
 class LoginSerializer(serializers.Serializer):
@@ -143,10 +146,10 @@ class UpdateUserSerializer(serializers.ModelSerializer):
             'password',
             'current_password',
         ]
+        read_only_fields = ['profile_image_url']
         extra_kwargs = {
             'email': {'required': False},
             'name': {'required': False, 'allow_blank': False},
-            'profile_image_url': {'required': False},
             'show_handle_on_leaderboard': {'required': False},
         }
 
@@ -168,7 +171,6 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         profile_fields = [
             'email',
             'name',
-            'profile_image_url',
             'show_handle_on_leaderboard',
             'password',
         ]
@@ -194,9 +196,14 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-        changes = get_profile_changes(instance, validated_data)
-
         validated_data.pop('current_password', None)
+
+        if 'email' in validated_data and validated_data['email'] != instance.email:
+            validated_data['profile_image_url'] = get_profile_image_for_email(
+                validated_data['email']
+            )
+
+        changes = get_profile_changes(instance, validated_data)
 
         if 'email' in validated_data:
             instance.email = validated_data['email']

@@ -107,7 +107,11 @@ O sistema foi escolhido por sua simplicidade e facilidade de integração com ap
 
 ## Atualização de Perfil
 
-O endpoint `POST /api/users/register/` cria um usuário com `email`, `name`, `password` e, opcionalmente, `profile_image_url` e `show_handle_on_leaderboard`. O campo `handle` é gerado automaticamente a partir do nome do usuário com números aleatórios.
+O endpoint `POST /api/users/register/` cria um usuário com `email`, `name`, `password` e, opcionalmente, `show_handle_on_leaderboard`. O campo `handle` é gerado automaticamente a partir do nome do usuário com números aleatórios.
+
+Na criação, a API busca uma imagem no Gravatar usando o hash SHA256 do email. Se não houver imagem cadastrada no Gravatar, a API gera uma imagem via UI Avatars usando somente esse hash e salva o arquivo em `public/media/profile/`, em preparação para futura integração com S3. Links de imagem enviados pelo cliente no cadastro ou edição de perfil são ignorados.
+
+Quando o email é alterado, a API busca novamente a imagem de perfil usando o novo email e registra a alteração de email e imagem no histórico do usuário.
 
 O endpoint `GET /api/users/profile/` retorna os dados completos do usuário autenticado:
 - id
