@@ -105,6 +105,22 @@ Authorization: Token <token>
 
 O sistema foi escolhido por sua simplicidade e facilidade de integração com aplicações mobile.
 
+## Atualização de Perfil
+
+O endpoint `PUT/PATCH /api/users/me/` permite atualizar o email e/ou a senha do usuário autenticado.
+
+Para alterar a senha, a requisição deve enviar a senha atual no campo `current_password` e a nova senha no campo `password`.
+
+Exemplo:
+```json
+{
+  "current_password": "SenhaAtual1",
+  "password": "MinhaNovaSenha1"
+}
+```
+
+Após a alteração de senha, o token atual é invalidado. O usuário deve realizar login novamente para receber um novo token.
+
 ---
 
 # Sistema de Logging

@@ -8,10 +8,10 @@ class LeaderboardFilter(django_filters.FilterSet):
     def filter_ordering(self, queryset, name, value):
         if value == 'asc':
             return queryset.order_by('post_count', 'user')
-        elif value == 'desc':
+        if value == 'desc':
             return queryset.order_by('-post_count', 'user')
         return queryset
-    
+
 
 class PostFilter(django_filters.FilterSet):
     airplane_registration = django_filters.CharFilter(lookup_expr='icontains')

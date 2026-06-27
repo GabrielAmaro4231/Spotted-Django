@@ -40,6 +40,13 @@ class MeView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def perform_update(self, serializer):
+        password_changed = 'password' in serializer.validated_data
+        serializer.save()
+
+        if password_changed and self.request.auth:
+            self.request.auth.delete()
+
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]

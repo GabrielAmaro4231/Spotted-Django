@@ -39,6 +39,7 @@ class PostViewSet(viewsets.ModelViewSet):
             Post.objects
             .values('user')
             .annotate(post_count=Count('id'))
+            .order_by('-post_count', 'user')
         )
 
         filterset = LeaderboardFilter(request.GET, queryset=base_queryset)
@@ -55,14 +56,14 @@ class PostViewSet(viewsets.ModelViewSet):
             user_id = entry['user']
 
             if current_user_id and user_id == current_user_id:
-                name = "Me"
+                name = 'Me'
             else:
-                name = f"Anonymous User {index}"
+                name = f'Anonymous User {index}'
 
             results.append({
-                "position": index,
-                "name": name,
-                "post_count": entry['post_count']
+                'position': index,
+                'name': name,
+                'post_count': entry['post_count']
             })
 
         return Response(results)
