@@ -42,7 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=150, blank=True)
     handle = models.CharField(max_length=180, unique=True, blank=True)
-    profile_image_url = models.URLField(blank=True)
+    profile_image_url = models.URLField(blank=True, max_length=500)
     show_handle_on_leaderboard = models.BooleanField(default=False)
 
     is_active = models.BooleanField(default=True)

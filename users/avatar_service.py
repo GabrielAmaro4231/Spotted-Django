@@ -1,19 +1,25 @@
+from dataclasses import dataclass
 from hashlib import sha256
-from pathlib import Path
+from mimetypes import guess_extension
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from django.conf import settings
+from .storage_service import upload_profile_avatar
 
 
 AVATAR_SIZE = 256
 HTTP_TIMEOUT = 5
 UI_AVATAR_PREFIX = 'profile_avatar_'
-PROFILE_AVATAR_DIR = Path('public/media/profile')
 REQUEST_HEADERS = {
     'User-Agent': 'SpottedAPI/1.0',
 }
+
+
+@dataclass
+class DownloadedImage:
+    content: bytes
+    content_type: str
 
 
 def get_email_hash(email):
@@ -29,26 +35,30 @@ def get_gravatar_url(email_hash):
     return f'https://gravatar.com/avatar/{email_hash}?{query_params}'
 
 
-def gravatar_exists(gravatar_url):
-    if request_succeeds(gravatar_url, method='HEAD'):
-        return True
-
-    return request_succeeds(gravatar_url, method='GET')
-
-
-def request_succeeds(url, method):
-    request = Request(url, headers=REQUEST_HEADERS, method=method)
+def download_image(url):
+    request = Request(url, headers=REQUEST_HEADERS)
 
     try:
         with urlopen(request, timeout=HTTP_TIMEOUT) as response:
-            return response.status == 200
+            if response.status != 200:
+                return None
+
+            content_type = response.headers.get('Content-Type', '').split(';')[0].strip()
+
+            if not content_type.startswith('image/'):
+                return None
+
+            return DownloadedImage(
+                content=response.read(),
+                content_type=content_type,
+            )
     except HTTPError as error:
         if error.code == 404:
-            return False
+            return None
     except URLError:
-        return False
+        return None
 
-    return False
+    return None
 
 
 def get_ui_avatar_url(email_hash):
@@ -63,37 +73,31 @@ def get_ui_avatar_url(email_hash):
     return f'https://ui-avatars.com/api/?{query_params}'
 
 
-def download_ui_avatar(email_hash):
-    avatar_url = get_ui_avatar_url(email_hash)
-    request = Request(avatar_url, headers=REQUEST_HEADERS)
+def get_file_extension(content_type):
+    extension = guess_extension(content_type) or '.png'
 
-    try:
-        with urlopen(request, timeout=HTTP_TIMEOUT) as response:
-            if response.status != 200:
-                return ''
+    if extension == '.jpe':
+        return '.jpg'
 
-            content_type = response.headers.get('Content-Type', '')
+    return extension
 
-            if not content_type.startswith('image/'):
-                return ''
 
-            filename = f'{UI_AVATAR_PREFIX}{email_hash}.png'
-            avatar_directory = Path(settings.BASE_DIR) / PROFILE_AVATAR_DIR
-            avatar_directory.mkdir(parents=True, exist_ok=True)
-            relative_path = PROFILE_AVATAR_DIR / filename
-            avatar_path = Path(settings.BASE_DIR) / relative_path
-            avatar_path.write_bytes(response.read())
-
-            return str(relative_path)
-    except (HTTPError, URLError, OSError):
-        return ''
+def upload_avatar(image, email_hash, source):
+    extension = get_file_extension(image.content_type)
+    filename = f'{UI_AVATAR_PREFIX}{source}_{email_hash}{extension}'
+    return upload_profile_avatar(image.content, filename, image.content_type)
 
 
 def get_profile_image_for_email(email):
     email_hash = get_email_hash(email)
-    gravatar_url = get_gravatar_url(email_hash)
+    gravatar_image = download_image(get_gravatar_url(email_hash))
 
-    if gravatar_exists(gravatar_url):
-        return gravatar_url
+    if gravatar_image:
+        return upload_avatar(gravatar_image, email_hash, 'gravatar')
 
-    return download_ui_avatar(email_hash)
+    ui_avatar_image = download_image(get_ui_avatar_url(email_hash))
+
+    if ui_avatar_image:
+        return upload_avatar(ui_avatar_image, email_hash, 'generated')
+
+    return ''
