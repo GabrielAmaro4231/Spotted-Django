@@ -1,131 +1,167 @@
-Membros: Gabriel Amaro;
-Vídeo Apresentação: https://www.youtube.com/watch?v=334MMan5_sQ;
+Membro: Gabriel Amaro  
+Vídeo de apresentação: https://www.youtube.com/watch?v=334MMan5_sQ
 
 # Spotted API
 
-Backend da aplicação **Spotted**.
+Backend da aplicação **Spotted**, um logbook digital para registro de avistamentos de aeronaves.
+
+A API foi criada para atender um aplicativo iOS/mobile, oferecendo autenticação, gerenciamento de perfil, upload automático de avatar, cadastro de avistamentos e ranking público anonimizado.
+
+---
+
+## Sobre o projeto
 
 O Spotted é uma plataforma de registro de avistamentos de aeronaves desenvolvida para permitir que usuários registrem, organizem e acompanhem aeronaves observadas de maneira simples e moderna.
 
-Este repositório contém a API responsável pela autenticação, persistência de dados, regras de negócio e comunicação com o aplicativo iOS.
+A proposta do app é funcionar como um logbook digital para entusiastas da aviação. Em vez de manter anotações soltas, o usuário pode criar um histórico próprio de aeronaves avistadas, com dados básicos do avistamento e localização.
+
+Na versão atual do backend, cada avistamento registra:
+
+- matrícula da aeronave;
+- modelo da aeronave, quando informado;
+- companhia aérea, quando informada;
+- latitude e longitude;
+- data e horário de criação.
+
+Este repositório contém a API responsável pela autenticação, persistência de dados, regras de acesso, gerenciamento de perfil, imagens de avatar e comunicação com o aplicativo mobile.
 
 ---
 
-# Sobre o Projeto
-
-O objetivo do Spotted é funcionar como uma espécie de logbook digital para entusiastas da aviação.
-
-Através do aplicativo, o usuário pode registrar informações sobre aeronaves avistadas, como:
-- matrícula
-- localização
-- data e horário
-- observações
-- informações adicionais da aeronave
-
-O backend foi desenvolvido seguindo uma arquitetura REST, permitindo que o aplicativo mobile se comunique de forma simples, segura e organizada com a API.
-
----
-
-# Objetivos do Backend
+## Objetivos do backend
 
 O backend foi projetado com foco em:
-- simplicidade
-- organização
-- escalabilidade futura
-- legibilidade do código
-- facilidade de manutenção
-- separação clara de responsabilidades
 
-O projeto evita complexidade desnecessária e prioriza uma base sólida para evolução futura.
+- simplicidade;
+- organização;
+- legibilidade do código;
+- facilidade de manutenção;
+- separação clara de responsabilidades;
+- uma base sólida para evoluções futuras.
+
+O projeto evita complexidade desnecessária e segue uma arquitetura REST para que o app mobile consiga consumir os recursos de forma previsível e segura.
 
 ---
 
-# Tecnologias Utilizadas
+## Tecnologias
 
-## Backend
 - Python
-- Django
+- Django 6.0.6
 - Django REST Framework
-
-## Banco de Dados
-- SQLite (ambiente de desenvolvimento)
-
-## Autenticação
-- Token Authentication do Django REST Framework
-
-## Outros
+- DRF Token Authentication
 - django-filter
-- Middleware customizado para logging de requisições
+- SQLite para desenvolvimento local
+- boto3 para upload de imagens de perfil no S3
+- python-dotenv para configurações locais por `.env`
 
 ---
 
-# Arquitetura
-
-A API segue uma arquitetura baseada em aplicações separadas por responsabilidade.
-
-Exemplo:
+## Estrutura
 
 ```text
 spotted_api/
-├── users/
-├── posts/
-├── core/
-└── spotted_api/
+├── core/          # código compartilhado, incluindo middleware de logging
+├── posts/         # avistamentos, filtros, permissões e leaderboard
+├── users/         # usuário customizado, auth, perfil, avatar e S3
+├── spotted_api/   # settings, URLs e entrypoints do projeto Django
+├── manage.py
+├── requirements.txt
+└── readme.md
 ```
 
----
+### Responsabilidades das aplicações
 
-# Aplicações
-
-## users
-Responsável por:
-- autenticação
-- gerenciamento de usuários
-- login
-- logout
-- perfil do usuário
-
-## posts
-- Responsável pelos registros de avistamentos realizados pelos usuários.
-
-## core
-- Responsável por funcionalidades compartilhadas da aplicação, como middlewares e configurações centrais.
+- `users`: cadastro, login, logout, perfil, geração de handle, preferências de leaderboard e avatar de perfil.
+- `posts`: registros de avistamentos, filtros, ordenação, permissões de dono e leaderboard.
+- `core`: código compartilhado, atualmente com o middleware de logging de requisições.
+- `spotted_api`: configurações centrais do Django, URLs raiz e entrypoints ASGI/WSGI.
 
 ---
 
-# Sistema de Autenticação
+## Como rodar localmente
 
-A autenticação é realizada utilizando o sistema de Token Authentication do Django REST Framework.
-Após o login, o usuário recebe um token que deve ser enviado nas próximas requisições autenticadas.
+Crie e ative o ambiente virtual, caso ainda não exista:
 
-Exemplo:
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+Rode as migrações:
+
+```bash
+.venv/bin/python manage.py migrate
+```
+
+Execute as verificações do Django:
+
+```bash
+.venv/bin/python manage.py check
+```
+
+Inicie o servidor local:
+
+```bash
+.venv/bin/python manage.py runserver
+```
+
+Rotas principais:
+
+- `/admin/`
+- `/api/users/`
+- `/api/posts/`
+
+---
+
+## Autenticação
+
+A API usa Token Authentication do Django REST Framework.
+
+Depois do login, envie o token nas rotas autenticadas:
+
 ```http
 Authorization: Token <token>
 ```
 
-O sistema foi escolhido por sua simplicidade e facilidade de integração com aplicações mobile.
+Por padrão, as rotas exigem usuário autenticado. Endpoints públicos usam permissão explícita.
 
-## Atualização de Perfil
+---
 
-O endpoint `POST /api/users/register/` cria um usuário com `email`, `name`, `password` e, opcionalmente, `show_handle_on_leaderboard`. O campo `handle` é gerado automaticamente a partir do nome do usuário com números aleatórios.
+## Usuários e perfil
 
-Na criação, a API busca uma imagem no Gravatar usando o hash SHA256 do email. Se houver imagem cadastrada, a API baixa essa imagem, envia para o S3 e salva em `profile_image_url` o link público do objeto no S3. Se não houver imagem cadastrada no Gravatar, a API gera uma imagem via UI Avatars usando somente esse hash, envia a imagem gerada para o S3 e salva o link do S3. Links de imagem enviados pelo cliente no cadastro ou edição de perfil são ignorados.
+O projeto usa um modelo de usuário customizado:
 
-Quando o email é alterado, a API busca novamente a imagem de perfil usando o novo email e registra a alteração de email e imagem no histórico do usuário.
+- `id` UUID
+- `email` como campo de login
+- `name`
+- `handle` gerado automaticamente
+- `profile_image_url`
+- `show_handle_on_leaderboard`
+- flags de permissão do Django: `is_active`, `is_staff`, `is_superuser`
 
-O endpoint `GET /api/users/profile/` retorna os dados completos do usuário autenticado:
-- id
-- email
-- name
-- handle
-- profile_image_url
-- show_handle_on_leaderboard
+Endpoints:
 
-O endpoint `PUT/PATCH /api/users/me/` permite atualizar o email, nome, link da imagem de perfil, preferência de exibição do handle na leaderboard e/ou senha do usuário autenticado.
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `POST` | `/api/users/register/` | Cria usuário com `email`, `name`, `password` e opcionalmente `show_handle_on_leaderboard`. |
+| `POST` | `/api/users/login/` | Autentica com `email` e `password`, retornando um token. |
+| `GET` | `/api/users/me/` | Retorna o perfil do usuário autenticado. |
+| `PUT/PATCH` | `/api/users/me/` | Atualiza `email`, `name`, `show_handle_on_leaderboard` e/ou senha. |
+| `GET` | `/api/users/profile/` | Retorna os dados completos do perfil autenticado. |
+| `POST` | `/api/users/logout/` | Remove o token atual. |
 
-Para alterar a senha, a requisição deve enviar a senha atual no campo `current_password` e a nova senha no campo `password`.
+Campos retornados no perfil:
 
-Exemplo:
+- `id`
+- `email`
+- `name`
+- `handle`
+- `profile_image_url`
+- `show_handle_on_leaderboard`
+
+### Senha
+
+Para alterar a senha, envie a senha atual e a nova senha:
+
 ```json
 {
   "current_password": "SenhaAtual1",
@@ -133,45 +169,127 @@ Exemplo:
 }
 ```
 
-Após a alteração de senha, o token atual é invalidado. O usuário deve realizar login novamente para receber um novo token.
+Após uma troca de senha, o token atual é invalidado e o usuário precisa fazer login novamente.
 
-No endpoint `GET /api/posts/leaderboard/`, o usuário atual aparece como `@handle` quando autenticado. Outros usuários só aparecem como `@handle` quando `show_handle_on_leaderboard` estiver marcado; caso contrário, continuam anônimos.
+### Avatar de perfil
 
-Alterações de perfil são registradas internamente em uma tabela de auditoria. A criação salva um snapshot dos dados públicos do perfil, e atualizações salvam apenas os campos alterados. Senhas não são registradas; troca de senha é marcada apenas como alteração realizada.
+`profile_image_url` é somente leitura para o cliente.
+
+No cadastro, a API:
+
+1. gera um hash SHA256 do email normalizado;
+2. tenta baixar a imagem do Gravatar;
+3. se não houver Gravatar, gera uma imagem pelo UI Avatars;
+4. envia a imagem para o S3;
+5. salva a URL pública no campo `profile_image_url`.
+
+Quando o email é alterado, a API repete esse fluxo com o novo email.
+
+Alterações de perfil são registradas em `UserProfileChangeLog`. A criação salva um snapshot dos campos públicos do perfil, e atualizações registram apenas campos alterados. Senhas não são armazenadas no histórico; a troca de senha é marcada apenas como alteração realizada.
 
 ---
 
-# Integração com S3
+## Configuração de S3
 
-A integração de imagens de perfil usa o SDK oficial da AWS para Python (`boto3`). As credenciais e configurações devem ficar em um arquivo `.env` local, baseado no `.env.example`, ou nas variáveis de ambiente do processo:
+As configurações podem ficar no arquivo `.env`, usando `.env.example` como base, ou em variáveis de ambiente do processo.
+
+Variáveis usadas pelo projeto:
 
 ```env
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
-AWS_SESSION_TOKEN=
 AWS_STORAGE_BUCKET_NAME=
-AWS_S3_REGION_NAME=sa-east-1
-AWS_S3_CUSTOM_DOMAIN=
-AWS_S3_ENDPOINT_URL=
-AWS_S3_PROFILE_AVATAR_PREFIX=profile/
-AWS_S3_OBJECT_ACL=
+AWS_S3_REGION_NAME=
+AWS_S3_PROFILE_AVATAR_PREFIX=
 ```
 
-`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN` seguem a cadeia padrão de credenciais do `boto3`. `AWS_S3_CUSTOM_DOMAIN` pode ser usado quando as imagens forem servidas por CloudFront ou por um domínio próprio. `AWS_S3_OBJECT_ACL` é opcional e deve ficar vazio em buckets configurados com Object Ownership/Bucket owner enforced.
+Também há suporte no código para configurações opcionais como `AWS_SESSION_TOKEN`, `AWS_S3_CUSTOM_DOMAIN`, `AWS_S3_ENDPOINT_URL` e `AWS_S3_OBJECT_ACL`, úteis em cenários com credenciais temporárias, CloudFront/domínio próprio, endpoints compatíveis com S3 ou buckets que exigem ACL explícita.
+
+Se `AWS_STORAGE_BUCKET_NAME` não estiver configurado ou se o upload falhar, a API mantém o usuário sem avatar salvo em `profile_image_url` e continua funcionando.
 
 ---
 
-# Sistema de Logging
+## Avistamentos
 
-A API possui um sistema centralizado de logging de requisições implementado através de middleware customizado.
-Os logs incluem informações como:
+Os avistamentos são representados pelo modelo `Post`.
+
+Campos:
+
+- `id` UUID
+- `user`
+- `airplane_registration`
+- `airplane_model`
+- `airline`
+- `latitude`
+- `longitude`
+- `created_at`
+
+`airplane_model` e `airline` são opcionais. `created_at` é gerado automaticamente. Latitude deve estar entre `-90` e `90`; longitude entre `-180` e `180`.
+
+Endpoints sob `/api/posts/`:
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/api/posts/` | Lista os avistamentos do usuário autenticado. |
+| `POST` | `/api/posts/` | Cria um avistamento para o usuário autenticado. |
+| `GET` | `/api/posts/<id>/` | Retorna um avistamento do usuário autenticado. |
+| `PUT/PATCH` | `/api/posts/<id>/` | Atualiza um avistamento do usuário autenticado. |
+| `DELETE` | `/api/posts/<id>/` | Remove um avistamento do usuário autenticado. |
+| `GET` | `/api/posts/leaderboard/` | Retorna o ranking público por quantidade de avistamentos. |
+
+Posts são privados por padrão. A listagem, consulta, edição e exclusão ficam sempre limitadas ao usuário autenticado.
+
+### Filtros e ordenação
+
+Filtros de posts:
+
+- `airplane_registration`
+- `airplane_model`
+- `airline`
+- `created_after`
+- `created_before`
+
+Os filtros de texto usam busca case-insensitive parcial.
+
+Ordenação de posts:
+
+- `ordering=created_at`
+- `ordering=-created_at`
+- `ordering=airplane_registration`
+- `ordering=-airplane_registration`
+
+A ordenação padrão é por `created_at` mais recente primeiro.
+
+### Leaderboard
+
+O endpoint `/api/posts/leaderboard/` agrega a quantidade de posts por usuário.
+
+Ele não expõe emails nem IDs de usuários. O nome exibido segue esta regra:
+
+- o usuário autenticado aparece como `@handle`;
+- outros usuários aparecem como `@handle` apenas se `show_handle_on_leaderboard` estiver ativo;
+- caso contrário, aparecem como `Anonymous User <posição>`.
+
+Ordenação da leaderboard:
+
+- `ordering=desc`
+- `ordering=asc`
+
+---
+
+## Logging
+
+O middleware `RequestLoggingMiddleware` registra metadados de requisições e respostas em `logs/requests.log` com rotação de arquivo.
+
+Dados registrados:
+
 - método HTTP
-- endpoint acessado
-- parâmetros da requisição
-- status da resposta
-- duração da requisição
-- identificador do usuário autenticado
+- path
+- query params
+- corpo da requisição
+- corpo da resposta
+- status code
+- duração
+- ID do usuário autenticado, quando houver
 
-Informações sensíveis como senhas e tokens são automaticamente ocultadas antes de serem registradas.
-
-Os logs são armazenados em arquivos rotativos para evitar crescimento excessivo do armazenamento.
+Campos sensíveis são mascarados automaticamente, incluindo senhas, tokens, autorização, cookies, secrets, API keys e JWTs.
