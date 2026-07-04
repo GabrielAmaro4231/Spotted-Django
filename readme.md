@@ -1,5 +1,5 @@
 Membro: Gabriel Amaro  
-Vídeo de apresentação: https://www.youtube.com/watch?v=334MMan5_sQ
+Vídeo de apresentação: https://youtu.be/IrggLXsIei8
 
 # Spotted API
 
